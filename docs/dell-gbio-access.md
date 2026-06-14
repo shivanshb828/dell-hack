@@ -20,6 +20,8 @@ Other host entries seen in `~/.ssh/known_hosts` (may be the same machine on a di
 
 **User:** `dell`
 
+**Hostname (observed):** `promaxgb10-887e`
+
 Auth is key- or password-based on the event network. If non-interactive SSH fails with `Permission denied (publickey,password)`, use an interactive terminal or load the correct key into your agent first.
 
 ### Recommended local SSH config
@@ -41,16 +43,19 @@ ssh dell-gbio
 
 ## Repo on the Dell
 
-Clone or pull the hackathon repo on the Dell box:
+The repo is **not** pre-installed on the GB10 box. Clone it first (from your home directory):
 
 ```bash
+cd ~
 git clone https://github.com/shivanshb828/dell-hack.git
 cd dell-hack
 git fetch origin
 git checkout integrate-dafely-from-pr   # or main after merge
 ```
 
-Seed databases (if missing):
+If `cd dell-hack` fails with "No such file or directory", you have not cloned yet — run the `git clone` block above.
+
+Seed databases (after clone):
 
 ```bash
 python3 scripts/init_m3_test_db.py
