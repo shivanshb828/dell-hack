@@ -14,6 +14,8 @@ VAD — Silero-VAD (energy fallback) — auto-stops on 800ms silence
     ↓
 STT — faster-whisper-server (localhost:9000, OpenAI-compatible)
     ↓
+M3 context lookup — optional SQLite seed DB (data/donna_m3_context.sqlite)
+    ↓
 Agent — OpenClaw CLI → Ollama (nemotron 120B) fallback
     ↓
 TTS — Kokoro-FastAPI (localhost:8880) → Piper fallback
@@ -79,6 +81,7 @@ Press **ENTER** to speak. Donna auto-stops when you go silent (~800ms).
 | `DONNA_OLLAMA_URL` | `http://localhost:11434/api/generate` | Ollama endpoint |
 | `DONNA_MODEL` | `nemotron` | Ollama model name |
 | `DONNA_OPENCLAW_BIN` | `openclaw` | OpenClaw binary path |
+| `DONNA_CONTEXT_DB` | `data/donna_m3_context.sqlite` | Local SQLite DB for case context lookup |
 | `DONNA_DASHBOARD_WS` | `ws://localhost:3001` | Dashboard WebSocket |
 | `DONNA_WAKEWORD_MODEL` | *(unset)* | Custom ONNX wake word model path |
 

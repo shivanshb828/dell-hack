@@ -9,8 +9,11 @@ import os
 import subprocess
 import sys
 import wave
+from pathlib import Path
 
 import pyaudio
+
+from donna.glue.context_bridge import lookup_context_block
 
 from .stt import transcribe_audio
 from .tts import play_audio, synthesize
@@ -26,6 +29,7 @@ MAX_RECORD_SECONDS = 30
 OLLAMA_URL = os.getenv("DONNA_OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_MODEL = os.getenv("DONNA_MODEL", "nemotron")
 OPENCLAW_BIN = os.getenv("DONNA_OPENCLAW_BIN", "openclaw")
+CONTEXT_DB = Path(os.getenv("DONNA_CONTEXT_DB", "data/donna_m3_context.sqlite"))
 
 
 def _record_until_silence(pa: pyaudio.PyAudio) -> bytes:
@@ -47,11 +51,30 @@ def _record_until_silence(pa: pyaudio.PyAudio) -> bytes:
     return collected
 
 
-async def _query_agent(text: str) -> str:
+def _build_agent_input(text: str, context_block: str) -> str:
+    if not context_block:
+        return text
+    return f"{context_block}\n\nClient: {text}"
+
+
+def _build_ollama_prompt(text: str, context_block: str) -> str:
+    parts = [
+        "You are Donna, a professional AI legal secretary for a personal injury law firm. "
+        "Keep responses concise (1-2 sentences). No legal advice.",
+    ]
+    if context_block:
+        parts.append(context_block)
+    parts.append(f"Client: {text}\nDonna:")
+    return "\n\n".join(parts)
+
+
+async def _query_agent(text: str, context_block: str = "") -> str:
+    agent_input = _build_agent_input(text, context_block)
+
     # Try OpenClaw CLI first
     try:
         result = subprocess.run(
-            [OPENCLAW_BIN, "run", "donna", "--input", text],
+            [OPENCLAW_BIN, "run", "donna", "--input", agent_input],
             capture_output=True, text=True, timeout=30
         )
         if result.returncode == 0 and result.stdout.strip():
@@ -66,11 +89,7 @@ async def _query_agent(text: str) -> str:
             OLLAMA_URL,
             json={
                 "model": OLLAMA_MODEL,
-                "prompt": (
-                    "You are Donna, a professional AI legal secretary for a personal injury law firm. "
-                    "Keep responses concise (1-2 sentences). No legal advice.\n\n"
-                    f"Client: {text}\nDonna:"
-                ),
+                "prompt": _build_ollama_prompt(text, context_block),
                 "stream": False,
             },
         )
@@ -143,9 +162,13 @@ async def main():
             print(f"You: {user_text}")
             await emit_to_dashboard({"type": "user_speech", "text": user_text})
 
+            context_block = lookup_context_block(user_text, db_path=CONTEXT_DB)
+            if context_block:
+                print("[Loaded case context from local DB]")
+
             print("Donna thinking...")
             try:
-                response = await _query_agent(user_text)
+                response = await _query_agent(user_text, context_block)
             except Exception as e:
                 print(f"[Agent error: {e}]")
                 response = "I'm sorry, I'm having trouble connecting right now."
