@@ -174,6 +174,11 @@ Hi Dhruva,
 A new client intake has been received and processed by Donna.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DONNA'S ASSESSMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{donna_reply.strip() if donna_reply else "(No assessment captured — check IPC logs)"}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CASE SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Case ID:   {case_id}
@@ -182,14 +187,9 @@ From:      {client_email}
 Status:    {phase_label}
 {attachment_lines}{tool_lines}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CLIENT MESSAGE
+CLIENT'S ORIGINAL MESSAGE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {body.strip()}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DONNA'S ASSESSMENT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{donna_reply.strip() if donna_reply else "(No assessment captured — check IPC logs)"}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
