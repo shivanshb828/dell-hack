@@ -1,0 +1,8 @@
+pyaudio>=0.2.14
+silero-vad>=6.0
+torch>=2.0
+httpx>=0.27
+websockets>=12.0
+numpy>=1.26
+pyyaml>=6.0
+openwakeword>=0.6
