@@ -18,13 +18,20 @@ import sqlite3
 import uuid
 from pathlib import Path
 
-import chromadb
 import httpx
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s — %(message)s")
+
+try:
+    import chromadb as _chromadb
+    _CHROMA_AVAILABLE = True
+except ImportError:
+    _chromadb = None  # type: ignore
+    _CHROMA_AVAILABLE = False
+    log.warning("chromadb not installed — document indexing disabled; SQLite only")
 
 from donna.telephony.config import TelephonyConfig
 
@@ -38,8 +45,13 @@ _cfg = TelephonyConfig.from_env()
 CONTEXT_DB   = str(_cfg.context_db)   # donna_m3_context.sqlite — cases, clients, notes
 CALENDAR_DB  = str(_cfg.calendar_db)  # donna_m3_calendar.sqlite
 
-_chroma = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
-_collection = _chroma.get_or_create_collection("donna_documents")
+_collection = None
+if _CHROMA_AVAILABLE:
+    try:
+        _chroma = _chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
+        _collection = _chroma.get_or_create_collection("donna_documents")
+    except Exception as _e:
+        log.warning("ChromaDB unavailable (%s) — SQLite-only mode", _e)
 
 app = FastAPI(title="Donna VLM Ingest")
 
@@ -170,6 +182,9 @@ def _save_to_sqlite(*, doc_id, case_id, filename, doc_type, file_path, summary):
 
 
 def _index_in_chroma(*, doc_id, case_id, filename, doc_type, summary):
+    if _collection is None:
+        log.debug("ChromaDB not available — skipping vector index for %s", doc_id)
+        return
     try:
         _collection.upsert(
             ids=[doc_id],
