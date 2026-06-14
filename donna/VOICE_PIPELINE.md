@@ -95,7 +95,8 @@ python donna/fake_dashboard.py
 
 **Terminal 2 — voice pipeline:**
 ```bash
-cd donna && python -m voice.pipeline
+cd ~/dell-hack && bash scripts/run_voice.sh
+# or: python -m donna.voice.pipeline  (from repo root, venv active)
 ```
 
 Press **ENTER** to speak. Donna auto-stops when you go silent (~800ms).

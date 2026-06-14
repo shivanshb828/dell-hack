@@ -18,5 +18,5 @@ fi
 
 # shellcheck disable=SC1091
 source "${VENV}/bin/activate"
-cd "${ROOT}/donna"
-exec python -m voice.pipeline "$@"
+cd "${ROOT}"
+exec python -m donna.voice.pipeline "$@"
