@@ -10,6 +10,10 @@ import sys
 import wave
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 import httpx
 import pyaudio
 
@@ -28,7 +32,9 @@ MAX_RECORD_SECONDS = 30
 
 OLLAMA_URL = os.getenv("DONNA_OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_MODEL = os.getenv("DONNA_MODEL", "nemotron-3-super")
-CONTEXT_DB = Path(os.getenv("DONNA_CONTEXT_DB", "data/donna_m3_context.sqlite"))
+CONTEXT_DB = Path(
+    os.getenv("DONNA_CONTEXT_DB", str(_REPO_ROOT / "data/donna_m3_context.sqlite"))
+)
 
 
 def _record_until_silence(pa: pyaudio.PyAudio) -> bytes:
