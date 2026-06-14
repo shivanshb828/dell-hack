@@ -2,6 +2,8 @@
 
 Donna is a local-first AI legal secretary for personal injury lawyers.
 
+**New workspace?** Start with [docs/hackathon-quickstart.md](docs/hackathon-quickstart.md) and [docs/testing-runbook.md](docs/testing-runbook.md).
+
 ## Voice Pipeline
 
 Push-to-talk voice interface with STT, agent routing, and TTS. See [donna/VOICE_PIPELINE.md](donna/VOICE_PIPELINE.md).
@@ -9,7 +11,7 @@ Push-to-talk voice interface with STT, agent routing, and TTS. See [donna/VOICE_
 ```bash
 cd donna
 pip install -r requirements.txt
-python -m voice.pipeline
+python3 -m voice.pipeline
 ```
 
 When the M3 seed DB is present, voice queries automatically inject matching case context before the agent call.
@@ -31,9 +33,22 @@ Run a sample context lookup:
 python3 scripts/context_lookup.py Maria
 ```
 
+## Dell GBIO (hackathon box)
+
+- [SSH access & port forwarding](docs/dell-gbio-access.md)
+- Health check: `bash scripts/check_services.sh`
+- Machine discovery (run on Dell): `bash scripts/dell_discovery.sh`
+
+```bash
+ssh dell@10.104.77.67
+```
+
 ## Tests
 
 ```bash
 python3 -m unittest discover -s tests
-cd donna && python -m pytest voice/tests/ -v
+cd donna && python3 -m pytest voice/tests/ -v
+bash scripts/check_services.sh
 ```
+
+See [docs/testing-runbook.md](docs/testing-runbook.md) for the full checklist.
