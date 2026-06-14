@@ -169,6 +169,45 @@ TOOL_DEFINITIONS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "schedule_followup",
+            "description": (
+                "Schedule a follow-up action for this client — a callback, email check-in, "
+                "or document reminder. Donna will send the follow-up automatically at the "
+                "scheduled time. Use after booking a consultation or when the client needs "
+                "to gather more information (medical records, police report, insurance info)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "followup_type": {
+                        "type": "string",
+                        "enum": ["email_checkin", "document_reminder", "callback", "appointment_confirmation"],
+                        "description": "Type of follow-up to schedule",
+                    },
+                    "scheduled_at": {
+                        "type": "string",
+                        "description": "ISO-8601 datetime when the follow-up should fire",
+                    },
+                    "client_email": {
+                        "type": "string",
+                        "description": "Client email address to send the follow-up to",
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "The body of the follow-up message Donna will send",
+                    },
+                    "subject": {
+                        "type": "string",
+                        "description": "Email subject line",
+                    },
+                },
+                "required": ["followup_type", "scheduled_at", "client_email", "message"],
+            },
+        },
+    },
 ] + EMAIL_TOOL_DEFINITIONS
 
 
@@ -213,6 +252,7 @@ class ToolRegistry:
             "case.create": self._case_create,
             "case.decline": self._case_decline,
             "calendar.create_event": self._calendar_create_event,
+            "schedule_followup": self._schedule_followup,
             "notify.dashboard": self._notify_dashboard,
             "send_intake_email": self._send_intake_email,
         }
@@ -394,6 +434,70 @@ class ToolRegistry:
             call_session_id=call_sid,
         )
         return ToolResult(ok=True, data={"sent": True, "body": body})
+
+    def _schedule_followup(self, call_sid: str, args: dict) -> ToolResult:
+        import sqlite3
+        from datetime import datetime, timezone
+
+        case_id = self._case_ids.get(call_sid) or call_sid
+        followup_id = f"fu-{uuid4()}"
+        db_path = self.calendar_db_path.parent / "followups.sqlite"
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with sqlite3.connect(db_path) as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS followups (
+                    id TEXT PRIMARY KEY,
+                    case_id TEXT,
+                    call_sid TEXT,
+                    followup_type TEXT NOT NULL,
+                    scheduled_at TEXT NOT NULL,
+                    client_email TEXT NOT NULL,
+                    subject TEXT,
+                    message TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    created_at TEXT NOT NULL,
+                    fired_at TEXT
+                )
+            """)
+            conn.execute(
+                """INSERT INTO followups
+                   (id, case_id, call_sid, followup_type, scheduled_at, client_email, subject, message, status, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
+                (
+                    followup_id,
+                    case_id,
+                    call_sid,
+                    args["followup_type"],
+                    args["scheduled_at"],
+                    args["client_email"],
+                    args.get("subject", f"Follow-up from Donna — {args['followup_type'].replace('_', ' ').title()}"),
+                    args["message"],
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+
+        # Also book it on the calendar so it shows in the dashboard
+        book_calendar(
+            self.calendar_db_path,
+            client_id=self._client_ids.get(call_sid, call_sid),
+            event_type="follow_up",
+            title=f"Follow-up: {args['followup_type'].replace('_', ' ').title()} — {args['client_email']}",
+            scheduled_at=args["scheduled_at"],
+            duration_minutes=15,
+            case_id=case_id,
+            attendee=args["client_email"],
+            notes=args["message"][:200],
+        )
+
+        return ToolResult(ok=True, data={
+            "followup_id": followup_id,
+            "status": "scheduled",
+            "scheduled_at": args["scheduled_at"],
+            "client_email": args["client_email"],
+            "followup_type": args["followup_type"],
+            "message": f"Follow-up scheduled for {args['scheduled_at']}. I'll reach out to {args['client_email']} automatically.",
+        })
 
     def _send_intake_email(self, call_sid: str, args: dict) -> ToolResult:
         case_id = args.get("case_id") or self._case_ids.get(call_sid)

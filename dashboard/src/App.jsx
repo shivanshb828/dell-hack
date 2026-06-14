@@ -9,6 +9,7 @@ import CalendarView from './views/CalendarView.jsx'
 import EmailsView from './views/EmailsView.jsx'
 import LeadsView from './views/LeadsView.jsx'
 import QueryView from './views/QueryView.jsx'
+import GamePlanView from './views/GamePlanView.jsx'
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
@@ -344,6 +345,7 @@ export default function App() {
 
   const views = {
     query: <QueryView />,
+    gameplan: <GamePlanView />,
     live: (
       <LiveCallView
         activeCall={state.activeCall}

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { API_URL } from '../lib/constants.js'
 
 const INCIDENT_LABELS = {
   auto_accident: 'Auto Accident',
@@ -22,6 +23,28 @@ const STAGE_LABELS = {
   active:              'Active',
   closed:              'Closed',
   declined:            'Declined',
+}
+
+const RISK_COLOR = {
+  red:   'bg-red-50 text-red-700 border-red-200',
+  amber: 'bg-amber-50 text-amber-700 border-amber-200',
+  green: 'bg-green-50 text-green-700 border-green-200',
+}
+
+function RiskBadge({ caseId }) {
+  const [risk, setRisk] = useState(null)
+  useEffect(() => {
+    fetch(`${API_URL}/api/cases/${encodeURIComponent(caseId)}/risk`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d?.risk && setRisk(d.risk))
+      .catch(() => {})
+  }, [caseId])
+  if (!risk) return <span className="text-[11px] text-ink-300">—</span>
+  return (
+    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded border ${RISK_COLOR[risk.color] ?? RISK_COLOR.amber}`}>
+      {risk.score}  {risk.label}
+    </span>
+  )
 }
 
 function daysUntil(dateStr) {
@@ -88,6 +111,7 @@ function CaseDrawer({ caseItem, onClose }) {
               { label: 'Case Type', content: <p className="text-sm text-ink-700">{INCIDENT_LABELS[caseItem.case_type] ?? caseItem.case_type}</p> },
               { label: 'Incident Date', content: <p className="text-sm text-ink-700">{new Date(caseItem.incident_date).toLocaleDateString()}</p> },
               { label: 'Statute of Limitations', content: <SOLBadge solDate={caseItem.sol_date} /> },
+              { label: 'Risk Score', content: <RiskBadge caseId={caseItem.case_id} /> },
             ].map(({ label, content }) => (
               <div key={label}>
                 <p className="text-[10px] uppercase tracking-wider text-ink-400 font-semibold mb-1.5">{label}</p>
@@ -174,7 +198,7 @@ export default function CasesView({ cases }) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-parchment-200 bg-parchment-50">
-                {['Client', 'Case Type', 'Incident Date', 'Stage', 'SOL'].map((h) => (
+                {['Client', 'Case Type', 'Incident Date', 'Stage', 'Risk', 'SOL'].map((h) => (
                   <th key={h} className="text-left px-5 py-3 text-[11px] uppercase tracking-wider text-ink-400 font-semibold">
                     {h}
                   </th>
@@ -213,6 +237,9 @@ export default function CasesView({ cases }) {
                     <span className={`text-[11px] font-semibold px-2.5 py-1 rounded border ${STAGE_STYLES[c.stage] ?? 'bg-parchment-100 text-ink-500 border-parchment-200'}`}>
                       {STAGE_LABELS[c.stage] ?? c.stage.replace(/_/g, ' ')}
                     </span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <RiskBadge caseId={c.case_id} />
                   </td>
                   <td className="px-5 py-3.5">
                     <SOLBadge solDate={c.sol_date} />

@@ -226,6 +226,191 @@ async def lawyer_query(body: QueryRequest):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+# ── Game plan + risk score ────────────────────────────────────────────────────
+
+def _compute_risk_score(case: dict) -> dict:
+    """
+    Rule-based risk scorer. Returns score 0-100 + label + flags.
+    Higher score = higher risk (less likely to take the case).
+    """
+    score = 0
+    flags = []
+
+    # SOL proximity
+    sol_date = case.get("sol_date") or case.get("statute_of_limitations")
+    if sol_date:
+        try:
+            from datetime import date
+            days_left = (date.fromisoformat(sol_date[:10]) - date.today()).days
+            if days_left < 0:
+                score += 50; flags.append("SOL EXPIRED")
+            elif days_left < 30:
+                score += 35; flags.append(f"SOL in {days_left}d — urgent")
+            elif days_left < 90:
+                score += 15; flags.append(f"SOL in {days_left}d")
+        except Exception:
+            pass
+
+    # Liability clarity
+    fault = (case.get("fault_party") or "").lower()
+    if not fault:
+        score += 10; flags.append("Fault party unclear")
+    elif "shared" in fault or "partial" in fault:
+        score += 8; flags.append("Shared fault — comparative negligence risk")
+
+    # Prior attorney
+    if case.get("prior_attorney"):
+        score += 12; flags.append("Prior attorney — check for fee lien")
+
+    # Medical treatment
+    treatment = (case.get("treatment_status") or "").lower()
+    if not treatment or treatment == "none":
+        score += 10; flags.append("No documented medical treatment")
+    elif "ongoing" in treatment:
+        score -= 5  # ongoing treatment = stronger damages
+
+    # Incident type modifiers
+    inc_type = (case.get("incident_type") or case.get("case_type") or "").lower()
+    if "medical_malpractice" in inc_type:
+        score += 8; flags.append("Med-mal — expert witness required")
+    elif "workplace" in inc_type:
+        score += 5; flags.append("Workers' comp bar may apply")
+
+    score = max(0, min(100, score))
+    if score >= 50:
+        label, color = "High Risk", "red"
+    elif score >= 25:
+        label, color = "Medium Risk", "amber"
+    else:
+        label, color = "Low Risk", "green"
+
+    return {"score": score, "label": label, "color": color, "flags": flags}
+
+
+def _generate_game_plan(case: dict, risk: dict) -> dict:
+    """Rule-based game plan — no LLM needed, fast and deterministic."""
+    steps = []
+    inc_type = (case.get("incident_type") or case.get("case_type") or "auto_accident").lower()
+    stage = case.get("stage", "intake")
+
+    # Universal first steps
+    if stage == "intake":
+        steps.append({"priority": "high", "action": "Complete signed retainer agreement", "owner": "Attorney"})
+        steps.append({"priority": "high", "action": "Obtain all medical records & bills", "owner": "Donna"})
+        steps.append({"priority": "high", "action": "Preserve all evidence (photos, dashcam, witness contacts)", "owner": "Client"})
+
+    if "auto" in inc_type or "vehicle" in inc_type:
+        steps += [
+            {"priority": "high",   "action": "Order police report",                         "owner": "Donna"},
+            {"priority": "high",   "action": "Notify client's insurer of representation",   "owner": "Attorney"},
+            {"priority": "medium", "action": "Request adjuster assignment & claim number",   "owner": "Donna"},
+            {"priority": "medium", "action": "Send lien letter to treating providers",       "owner": "Attorney"},
+            {"priority": "low",    "action": "Evaluate need for accident reconstruction",    "owner": "Attorney"},
+        ]
+    elif "slip" in inc_type or "fall" in inc_type:
+        steps += [
+            {"priority": "high",   "action": "Obtain incident report from property owner",  "owner": "Donna"},
+            {"priority": "high",   "action": "Preserve surveillance footage (72-hr window)","owner": "Attorney"},
+            {"priority": "medium", "action": "Document hazard condition with photos",        "owner": "Client"},
+            {"priority": "medium", "action": "Identify property owner / insurance carrier",  "owner": "Donna"},
+        ]
+    elif "workplace" in inc_type:
+        steps += [
+            {"priority": "high",   "action": "File workers' comp claim within deadline",    "owner": "Attorney"},
+            {"priority": "high",   "action": "Identify third-party liability (equipment, contractor)", "owner": "Attorney"},
+            {"priority": "medium", "action": "Obtain OSHA report if applicable",            "owner": "Donna"},
+        ]
+    elif "medical" in inc_type:
+        steps += [
+            {"priority": "high",   "action": "Retain medical expert early",                 "owner": "Attorney"},
+            {"priority": "high",   "action": "Obtain complete medical records pre/post",     "owner": "Donna"},
+            {"priority": "medium", "action": "Review standard of care with expert",          "owner": "Attorney"},
+        ]
+
+    # SOL flag → top of list
+    for flag in risk["flags"]:
+        if "SOL" in flag:
+            steps.insert(0, {"priority": "urgent", "action": f"⚠️  {flag} — file or toll immediately", "owner": "Attorney"})
+
+    # Settlement range estimate (very rough)
+    treatment = (case.get("treatment_status") or "").lower()
+    if "surgery" in treatment or "hospital" in treatment:
+        settlement_range = "$50,000 – $250,000+"
+    elif "ongoing" in treatment or "physical therapy" in treatment:
+        settlement_range = "$15,000 – $75,000"
+    elif treatment and treatment != "none":
+        settlement_range = "$5,000 – $25,000"
+    else:
+        settlement_range = "TBD — awaiting medical evaluation"
+
+    return {
+        "steps": steps,
+        "settlement_range": settlement_range,
+        "case_type": inc_type,
+        "stage": stage,
+    }
+
+
+class GamePlanRequest(BaseModel):
+    case_id: str
+
+
+@app.post("/api/gameplan")
+async def get_gameplan(body: GamePlanRequest):
+    """Generate risk score + action game plan for a case."""
+    cfg = TelephonyConfig.from_env()
+    import sqlite3
+    case = None
+
+    # Try context DB first
+    try:
+        with sqlite3.connect(cfg.context_db) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT * FROM intakes WHERE case_id=? ORDER BY created_at DESC LIMIT 1",
+                (body.case_id,),
+            ).fetchone()
+            if row:
+                case = dict(row)
+    except Exception:
+        pass
+
+    # Fallback to telephony DB
+    if not case:
+        try:
+            with sqlite3.connect(cfg.telephony_db) as conn:
+                conn.row_factory = sqlite3.Row
+                row = conn.execute(
+                    "SELECT * FROM call_sessions WHERE call_sid=? LIMIT 1",
+                    (body.case_id,),
+                ).fetchone()
+                if row:
+                    case = dict(row)
+        except Exception:
+            pass
+
+    if not case:
+        case = {"case_id": body.case_id, "stage": "intake"}
+
+    risk = _compute_risk_score(case)
+    plan = _generate_game_plan(case, risk)
+
+    return {
+        "case_id": body.case_id,
+        "risk": risk,
+        "game_plan": plan,
+        "generated_at": __import__("datetime").datetime.utcnow().isoformat(),
+    }
+
+
+@app.get("/api/cases/{case_id}/risk")
+async def get_risk_score(case_id: str):
+    """Quick risk score for a single case (no full game plan)."""
+    req = GamePlanRequest(case_id=case_id)
+    result = await get_gameplan(req)
+    return {"case_id": case_id, "risk": result["risk"]}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("donna.ipc.server:app", host="127.0.0.1", port=8000, reload=False)
