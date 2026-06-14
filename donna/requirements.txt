@@ -10,6 +10,8 @@ aiosmtplib
 beautifulsoup4
 lxml
 pyyaml
+python-dotenv
+aiohttp
 
 # test
 pytest
