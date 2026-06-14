@@ -6,11 +6,11 @@ Press ENTER to start recording. Donna auto-stops when you go silent.
 import asyncio
 import io
 import os
-import subprocess
 import sys
 import wave
 from pathlib import Path
 
+import httpx
 import pyaudio
 
 from donna.glue.context_bridge import lookup_context_block
@@ -27,8 +27,7 @@ CHANNELS = 1
 MAX_RECORD_SECONDS = 30
 
 OLLAMA_URL = os.getenv("DONNA_OLLAMA_URL", "http://localhost:11434/api/generate")
-OLLAMA_MODEL = os.getenv("DONNA_MODEL", "nemotron")
-OPENCLAW_BIN = os.getenv("DONNA_OPENCLAW_BIN", "openclaw")
+OLLAMA_MODEL = os.getenv("DONNA_MODEL", "nemotron-3-super")
 CONTEXT_DB = Path(os.getenv("DONNA_CONTEXT_DB", "data/donna_m3_context.sqlite"))
 
 
@@ -51,12 +50,6 @@ def _record_until_silence(pa: pyaudio.PyAudio) -> bytes:
     return collected
 
 
-def _build_agent_input(text: str, context_block: str) -> str:
-    if not context_block:
-        return text
-    return f"{context_block}\n\nClient: {text}"
-
-
 def _build_ollama_prompt(text: str, context_block: str) -> str:
     parts = [
         "You are Donna, a professional AI legal secretary for a personal injury law firm. "
@@ -68,23 +61,8 @@ def _build_ollama_prompt(text: str, context_block: str) -> str:
     return "\n\n".join(parts)
 
 
-async def _query_agent(text: str, context_block: str = "") -> str:
-    agent_input = _build_agent_input(text, context_block)
-
-    # Try OpenClaw CLI first
-    try:
-        result = subprocess.run(
-            [OPENCLAW_BIN, "run", "donna", "--input", agent_input],
-            capture_output=True, text=True, timeout=30
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-
-    # Fallback: direct Ollama HTTP
-    import httpx
-    async with httpx.AsyncClient(timeout=30.0) as client:
+async def _query_ollama(text: str, context_block: str = "") -> str:
+    async with httpx.AsyncClient(timeout=120.0) as client:
         resp = await client.post(
             OLLAMA_URL,
             json={
@@ -168,7 +146,7 @@ async def main():
 
             print("Donna thinking...")
             try:
-                response = await _query_agent(user_text, context_block)
+                response = await _query_ollama(user_text, context_block)
             except Exception as e:
                 print(f"[Agent error: {e}]")
                 response = "I'm sorry, I'm having trouble connecting right now."

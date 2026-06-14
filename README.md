@@ -14,7 +14,7 @@ pip install -r requirements.txt
 python3 -m voice.pipeline
 ```
 
-When the M3 seed DB is present, voice queries automatically inject matching case context before the agent call.
+When the M3 seed DB is present, voice queries inject matching case context, then call **Ollama directly** (no OpenClaw hop).
 
 ## M2 Agent + GBrain (OpenClaw)
 

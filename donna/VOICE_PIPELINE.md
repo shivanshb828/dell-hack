@@ -16,7 +16,7 @@ STT — faster-whisper-server (localhost:9000, OpenAI-compatible)
     ↓
 M3 context lookup — optional SQLite seed DB (data/donna_m3_context.sqlite)
     ↓
-Agent — OpenClaw CLI → Ollama (nemotron 120B) fallback
+Ollama (nemotron-3-super on Dell GB10)
     ↓
 TTS — Kokoro-FastAPI (localhost:8880) → Piper fallback
     ↓
@@ -80,7 +80,6 @@ Press **ENTER** to speak. Donna auto-stops when you go silent (~800ms).
 | `DONNA_PIPER_MODEL` | `en_US-amy-medium` | Piper voice model |
 | `DONNA_OLLAMA_URL` | `http://localhost:11434/api/generate` | Ollama endpoint |
 | `DONNA_MODEL` | `nemotron-3-super` on Dell GB10; `nemotron` elsewhere | Ollama model name |
-| `DONNA_OPENCLAW_BIN` | `openclaw` | OpenClaw binary path |
 | `DONNA_CONTEXT_DB` | `data/donna_m3_context.sqlite` | Local SQLite DB for case context lookup |
 | `DONNA_DASHBOARD_WS` | `ws://localhost:3001` | Dashboard WebSocket |
 | `DONNA_WAKEWORD_MODEL` | *(unset)* | Custom ONNX wake word model path |
@@ -130,5 +129,4 @@ Events emitted to `ws://localhost:3001`:
 | faster-whisper-server | 9000 | Shivansh (Docker on Dell GBIO) |
 | Kokoro-FastAPI | 8880 | Shivansh (Docker) |
 | Ollama + Nemotron 120B | 11434 | Shivansh (after `ollama pull nemotron`) |
-| OpenClaw + GBrain | CLI + MCP | Aayush — see [gbrain-openclaw-setup.md](../docs/gbrain-openclaw-setup.md) |
 | React dashboard | 3001 | Dhruva (`npm run dev`) |
