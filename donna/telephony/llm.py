@@ -59,6 +59,7 @@ class DonnaLLM:
         stream: bool,
         tools: list[dict] | None = None,
     ) -> dict:
+        num_ctx = int(os.getenv("DONNA_NUM_CTX", "4096"))
         payload: dict = {
             "model": self.model,
             "messages": [{"role": "system", "content": system_prompt}, *[
@@ -66,6 +67,7 @@ class DonnaLLM:
             ]],
             "stream": stream,
             "keep_alive": self.keep_alive,
+            "options": {"num_ctx": num_ctx, "num_predict": 256},
         }
         if tools:
             payload["tools"] = tools
@@ -155,6 +157,7 @@ class DonnaLLM:
     def generate_simple(self, *, system_prompt: str, user_text: str) -> str:
         prompt = f"{system_prompt}\n\nClient: {user_text}\nDonna:"
         with httpx.Client(timeout=120.0) as client:
+            num_ctx = int(os.getenv("DONNA_NUM_CTX", "4096"))
             resp = client.post(
                 f"{self.ollama_url}/api/generate",
                 json={
@@ -162,6 +165,7 @@ class DonnaLLM:
                     "prompt": prompt,
                     "stream": False,
                     "keep_alive": self.keep_alive,
+                    "options": {"num_ctx": num_ctx, "num_predict": 256},
                 },
             )
             resp.raise_for_status()

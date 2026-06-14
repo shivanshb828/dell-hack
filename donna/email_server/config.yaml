@@ -12,7 +12,7 @@ imap:
   use_ssl: true
   username: ""                 # set DONNA_EMAIL_USER in .env
   password: ""                 # set DONNA_EMAIL_PASS in .env (Gmail app password)
-  poll_interval_seconds: 30
+  poll_interval_seconds: 10
   mailbox: "INBOX"
   mark_read: true
 
