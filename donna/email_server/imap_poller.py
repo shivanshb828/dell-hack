@@ -21,7 +21,8 @@ log = logging.getLogger(__name__)
 
 def _fetch_unread(conn: imaplib.IMAP4_SSL | imaplib.IMAP4) -> list[bytes]:
     conn.select(config.IMAP_MAILBOX)
-    _, data = conn.search(None, "UNSEEN")
+    # Only fetch unread emails addressed to Donna — avoids scanning the full inbox
+    _, data = conn.search(None, "UNSEEN", "SUBJECT", "[DONNA]")
     uids = data[0].split()
     if not uids:
         return []
