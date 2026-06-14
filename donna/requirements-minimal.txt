@@ -1,0 +1,6 @@
+# Minimal deps for voice pipeline on Dell GB10 (no torch / silero / openwakeword).
+# VAD falls back to energy-based detection; wake word uses Enter key.
+pyaudio>=0.2.14
+httpx>=0.27
+websockets>=12.0
+numpy>=1.26

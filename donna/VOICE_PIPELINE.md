@@ -44,9 +44,11 @@ Dashboard WebSocket (localhost:3001) — status + transcript events
 ```bash
 cd ~/dell-hack
 git pull
-bash scripts/setup_venv.sh
-source .venv/bin/activate
+bash scripts/setup_venv.sh          # minimal deps — no torch (energy VAD fallback)
+bash scripts/run_voice.sh
 ```
+
+Use `bash scripts/setup_venv.sh --full` only if you need Silero-VAD / torch (large download).
 
 Or use wrapper scripts (auto-activate venv):
 
