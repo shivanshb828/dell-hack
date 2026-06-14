@@ -16,6 +16,7 @@ from tools.calendar import book_calendar, check_calendar_conflicts, get_upcoming
 from tools.case_files import (
     create_case_file, get_case_file, update_case_file,
     list_cases, search_context, log_payment, get_payment_summary, log_court_date,
+    get_urgent_deadlines, get_case_summary, get_dashboard_stats,
 )
 from tools.case_law import search_case_law, analyze_case_weaknesses, profile_adverse_adjuster
 from tools import ALL_TOOL_DEFINITIONS
@@ -54,6 +55,9 @@ _DISPATCH = {
     "search_case_law":          search_case_law,
     "analyze_case_weaknesses":  analyze_case_weaknesses,
     "profile_adverse_adjuster": profile_adverse_adjuster,
+    "get_urgent_deadlines":     get_urgent_deadlines,
+    "get_case_summary":         get_case_summary,
+    "get_dashboard_stats":      get_dashboard_stats,
 }
 
 

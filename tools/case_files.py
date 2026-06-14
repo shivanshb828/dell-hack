@@ -296,6 +296,195 @@ def log_court_date(
     return {"status": "logged", "court_date_id": court_date_id}
 
 
+# ── Lawyer query tools ────────────────────────────────────────────────────────
+
+def get_urgent_deadlines(*, days_ahead: int = 90) -> dict[str, Any]:
+    """Return open cases whose SOL expires within days_ahead days, ordered by urgency."""
+    today = date.today()
+    cutoff = today + timedelta(days=days_ahead)
+    with _conn() as conn:
+        cur = conn.execute(
+            """
+            SELECT c.id, cl.name, c.case_type, c.incident_date, c.stage,
+                   c.statute_of_limitations_date, c.state_jurisdiction,
+                   c.at_fault_party, c.adverse_carrier
+            FROM cases c JOIN clients cl ON cl.id = c.client_id
+            WHERE c.statute_of_limitations_date <= %s
+              AND c.stage NOT IN ('settlement', 'closed')
+            ORDER BY c.statute_of_limitations_date ASC
+            """,
+            (cutoff,),
+        )
+        rows = cur.fetchall()
+
+    deadlines = []
+    for r in rows:
+        sol = r[5]
+        if sol is None:
+            continue
+        sol_date = sol if isinstance(sol, date) else date.fromisoformat(str(sol))
+        days_left = (sol_date - today).days
+        deadlines.append({
+            "case_id": r[0],
+            "client_name": r[1],
+            "case_type": r[2],
+            "incident_date": str(r[3]),
+            "stage": r[4],
+            "sol_date": str(r[5]),
+            "state": r[6],
+            "at_fault_party": r[7],
+            "adverse_carrier": r[8],
+            "days_to_sol": days_left,
+            "urgency": "critical" if days_left <= 30 else "warning",
+        })
+
+    return {
+        "count": len(deadlines),
+        "days_ahead": days_ahead,
+        "deadlines": deadlines,
+    }
+
+
+def get_case_summary(*, case_id: str) -> dict[str, Any]:
+    """Full case summary: parties, stage, SOL, notes, payments, court dates, documents."""
+    with _conn() as conn:
+        cur = conn.execute(
+            """
+            SELECT c.id, c.case_type, c.incident_date, c.incident_location,
+                   c.incident_description, c.injuries, c.treating_physician,
+                   c.at_fault_party, c.adverse_carrier, c.client_carrier,
+                   c.witnesses, c.police_report_number, c.stage,
+                   c.statute_of_limitations_date, c.state_jurisdiction, c.updated_at,
+                   cl.name, cl.phone, cl.email
+            FROM cases c JOIN clients cl ON cl.id = c.client_id
+            WHERE c.id = %s
+            """,
+            (case_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return {"status": "not_found", "case_id": case_id}
+
+        memories = conn.execute(
+            "SELECT kind, content, created_at FROM memories WHERE case_id = %s ORDER BY created_at",
+            (case_id,),
+        ).fetchall()
+
+        payments = conn.execute(
+            "SELECT payment_type, status, amount, date FROM payments WHERE case_id = %s ORDER BY date",
+            (case_id,),
+        ).fetchall()
+
+        court_dates = conn.execute(
+            "SELECT date, court, judge, outcome, notes FROM court_dates WHERE case_id = %s ORDER BY date",
+            (case_id,),
+        ).fetchall()
+
+        docs = conn.execute(
+            "SELECT filename, doc_type, summary FROM documents WHERE case_id = %s ORDER BY uploaded_at",
+            (case_id,),
+        ).fetchall()
+
+    today = date.today()
+    sol = row[13]
+    sol_date = sol if isinstance(sol, date) else (date.fromisoformat(str(sol)) if sol else None)
+    days_to_sol = (sol_date - today).days if sol_date else None
+
+    return {
+        "status": "found",
+        "case": {
+            "id": row[0],
+            "case_type": row[1],
+            "incident_date": str(row[2]),
+            "incident_location": row[3],
+            "incident_description": row[4],
+            "injuries": row[5],
+            "treating_physician": row[6],
+            "at_fault_party": row[7],
+            "adverse_carrier": row[8],
+            "client_carrier": row[9],
+            "witnesses": row[10],
+            "police_report_number": row[11],
+            "stage": row[12],
+            "sol_date": str(row[13]),
+            "days_to_sol": days_to_sol,
+            "sol_urgency": (
+                "critical" if days_to_sol is not None and days_to_sol <= 30 else
+                "warning" if days_to_sol is not None and days_to_sol <= 90 else
+                "ok"
+            ),
+            "state_jurisdiction": row[14],
+            "last_updated": str(row[15]),
+            "client_name": row[16],
+            "client_phone": row[17],
+            "client_email": row[18],
+        },
+        "notes": [
+            {"kind": m[0], "content": m[1], "at": str(m[2])}
+            for m in memories
+        ],
+        "payments": [
+            {"type": p[0], "status": p[1], "amount": float(p[2]), "date": str(p[3])}
+            for p in payments
+        ],
+        "court_dates": [
+            {"date": str(c[0]), "court": c[1], "judge": c[2], "outcome": c[3], "notes": c[4]}
+            for c in court_dates
+        ],
+        "documents": [
+            {"filename": d[0], "type": d[1], "summary": d[2]}
+            for d in docs
+        ],
+    }
+
+
+def get_dashboard_stats() -> dict[str, Any]:
+    """Aggregate caseload stats: counts by stage, SOL urgency, upcoming events."""
+    today = date.today()
+    cutoff_30 = today + timedelta(days=30)
+    cutoff_90 = today + timedelta(days=90)
+
+    with _conn() as conn:
+        stage_rows = conn.execute(
+            "SELECT stage, COUNT(*) FROM cases GROUP BY stage ORDER BY stage"
+        ).fetchall()
+
+        client_count = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
+
+        critical_sol = conn.execute(
+            "SELECT COUNT(*) FROM cases WHERE statute_of_limitations_date <= %s AND stage NOT IN ('settlement','closed')",
+            (cutoff_30,),
+        ).fetchone()[0]
+
+        warning_sol = conn.execute(
+            """
+            SELECT COUNT(*) FROM cases
+            WHERE statute_of_limitations_date > %s
+              AND statute_of_limitations_date <= %s
+              AND stage NOT IN ('settlement','closed')
+            """,
+            (cutoff_30, cutoff_90),
+        ).fetchone()[0]
+
+        upcoming_events = conn.execute(
+            "SELECT COUNT(*) FROM calendar_events WHERE scheduled_at BETWEEN NOW() AND NOW() + INTERVAL '7 days'"
+        ).fetchone()[0]
+
+        recent_intake = conn.execute(
+            "SELECT COUNT(*) FROM cases WHERE stage = 'intake'"
+        ).fetchone()[0]
+
+    return {
+        "total_clients": client_count,
+        "total_cases": sum(r[1] for r in stage_rows),
+        "by_stage": {r[0]: r[1] for r in stage_rows},
+        "sol_critical_30d": critical_sol,
+        "sol_warning_90d": warning_sol,
+        "upcoming_events_7d": upcoming_events,
+        "pending_intake": recent_intake,
+    }
+
+
 TOOL_DEFINITIONS = [
     {
         "type": "function",
@@ -417,6 +606,48 @@ TOOL_DEFINITIONS = [
                     "notes": {"type": "string"},
                 },
                 "required": ["case_id", "date", "court", "outcome"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_urgent_deadlines",
+            "description": "List open cases approaching their statute of limitations deadline. Returns cases ordered by urgency (soonest first).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "days_ahead": {
+                        "type": "integer",
+                        "default": 90,
+                        "description": "How far ahead to look in days (default 90).",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_case_summary",
+            "description": "Full case summary for a given case_id: parties, stage, SOL status, all notes, payments, court dates, and documents.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "case_id": {"type": "string", "description": "The case ID (e.g. case-uuid)."},
+                },
+                "required": ["case_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_dashboard_stats",
+            "description": "Aggregate caseload stats: total cases by stage, SOL urgency counts, upcoming calendar events this week, and pending intakes.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
             },
         },
     },
