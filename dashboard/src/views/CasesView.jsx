@@ -9,10 +9,19 @@ const INCIDENT_LABELS = {
 }
 
 const STAGE_STYLES = {
-  intake:   'bg-legal-navy-light text-legal-navy border-blue-200',
-  active:   'bg-legal-forest-light text-legal-forest border-legal-forest-border',
-  closed:   'bg-parchment-100 text-ink-500 border-parchment-300',
-  declined: 'bg-legal-crimson-light text-legal-crimson border-legal-crimson-border',
+  intake:              'bg-legal-navy-light text-legal-navy border-blue-200',
+  records_gathering:   'bg-legal-amber-light text-legal-amber border-legal-amber-border',
+  active:              'bg-legal-forest-light text-legal-forest border-legal-forest-border',
+  closed:              'bg-parchment-100 text-ink-500 border-parchment-300',
+  declined:            'bg-legal-crimson-light text-legal-crimson border-legal-crimson-border',
+}
+
+const STAGE_LABELS = {
+  intake:              'Intake',
+  records_gathering:   'Records Gathering',
+  active:              'Active',
+  closed:              'Closed',
+  declined:            'Declined',
 }
 
 function daysUntil(dateStr) {
@@ -72,8 +81,8 @@ function CaseDrawer({ caseItem, onClose }) {
           <div className="grid grid-cols-2 gap-5">
             {[
               { label: 'Stage', content: (
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded border capitalize ${STAGE_STYLES[caseItem.stage] ?? 'bg-parchment-100 text-ink-600 border-parchment-200'}`}>
-                  {caseItem.stage}
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded border ${STAGE_STYLES[caseItem.stage] ?? 'bg-parchment-100 text-ink-600 border-parchment-200'}`}>
+                  {STAGE_LABELS[caseItem.stage] ?? caseItem.stage.replace(/_/g, ' ')}
                 </span>
               )},
               { label: 'Case Type', content: <p className="text-sm text-ink-700">{INCIDENT_LABELS[caseItem.case_type] ?? caseItem.case_type}</p> },
@@ -98,7 +107,7 @@ function CaseDrawer({ caseItem, onClose }) {
   )
 }
 
-const STAGE_FILTERS = ['all', 'intake', 'active', 'closed', 'declined']
+const STAGE_FILTERS = ['all', 'intake', 'records_gathering', 'active', 'closed', 'declined']
 
 export default function CasesView({ cases }) {
   const [filter, setFilter] = useState('all')
@@ -147,13 +156,13 @@ export default function CasesView({ cases }) {
             <button
               key={stage}
               onClick={() => setFilter(stage)}
-              className={`px-3 py-1.5 rounded text-[12px] font-medium transition-all capitalize ${
+              className={`px-3 py-1.5 rounded text-[12px] font-medium transition-all ${
                 filter === stage
                   ? 'bg-legal-navy text-white'
                   : 'bg-white text-ink-600 border border-parchment-200 hover:border-parchment-300 hover:bg-parchment-50'
               }`}
             >
-              {stage === 'all' ? 'All Cases' : stage}
+              {stage === 'all' ? 'All Cases' : (STAGE_LABELS[stage] ?? stage.replace(/_/g, ' '))}
             </button>
           ))}
         </div>
@@ -201,8 +210,8 @@ export default function CasesView({ cases }) {
                     <span className="text-[13px] text-ink-600">{new Date(c.incident_date).toLocaleDateString()}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded border capitalize ${STAGE_STYLES[c.stage] ?? 'bg-parchment-100 text-ink-500 border-parchment-200'}`}>
-                      {c.stage}
+                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded border ${STAGE_STYLES[c.stage] ?? 'bg-parchment-100 text-ink-500 border-parchment-200'}`}>
+                      {STAGE_LABELS[c.stage] ?? c.stage.replace(/_/g, ' ')}
                     </span>
                   </td>
                   <td className="px-5 py-3.5">

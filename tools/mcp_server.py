@@ -55,7 +55,6 @@ _DISPATCH = {
     "search_case_law":          search_case_law,
     "analyze_case_weaknesses":  analyze_case_weaknesses,
     "profile_adverse_adjuster": profile_adverse_adjuster,
-    # lawyer query tools
     "get_urgent_deadlines":     get_urgent_deadlines,
     "get_case_summary":         get_case_summary,
     "get_dashboard_stats":      get_dashboard_stats,

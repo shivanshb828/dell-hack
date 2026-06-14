@@ -37,17 +37,17 @@
       memory: { memorySearch: { enabled: true } },
     },
 
-    // ── Lawyer query agent — database-backed Q&A for the attorney ────────────
-    // Invoke: openclaw run lawyer --input "Who has the most urgent SOL deadline?"
-    // Read-only by default. Full access to donna_tools MCP server.
-    // Persona: direct, brief, no intake flow — just answers about existing caseload.
+    // ── Lawyer query agent — DB-backed Q&A for the attorney ─────────────────
+    // Invoked by the dashboard "Ask Donna" panel via POST /api/query on the IPC server.
+    // IPC server calls: POST http://localhost:18789/v1/chat/completions
+    //   with header X-OpenClaw-Agent: lawyer
+    // Read-only by default; agent prompt gates writes on explicit attorney instruction.
     lawyer: {
-      model: "ollama/donna",              // same base model, focused prompt
+      model: "ollama/donna",
       systemPrompt: { $include: "./agent/lawyer_prompt.md" },
-      thinking: "enabled",               // enables multi-step tool chaining for complex queries
+      thinking: "enabled",
       memory: { memorySearch: { enabled: true } },
       tools: {
-        // Lawyer query reads — primary capabilities
         allowed: [
           "donna_tools::get_dashboard_stats",
           "donna_tools::get_urgent_deadlines",
