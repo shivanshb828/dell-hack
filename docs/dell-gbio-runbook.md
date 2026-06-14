@@ -13,8 +13,12 @@
 | GPU | NVIDIA GB10, driver 580.159.03 |
 | Repo path | `/home/dell/dell-hack` |
 | Branch | `integrate-dafely-from-pr` (or `main` after merge) |
+| Password | `123456` (hackathon dummy — safe to store in repo) |
 
-Credentials are set on the hackathon box — **do not commit passwords** to this repo. Use interactive SSH or `ssh-copy-id` from your laptop.
+```bash
+ssh dell@10.104.77.67
+# password: 123456
+```
 
 ## First-time setup (clone → venv → run)
 

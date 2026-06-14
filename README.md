@@ -12,6 +12,7 @@ Then: [docs/hackathon-quickstart.md](docs/hackathon-quickstart.md) · [docs/test
 
 ```bash
 ssh dell@10.104.77.67
+# password: 123456
 cd ~/dell-hack && git pull
 bash scripts/setup_venv.sh    # once
 bash scripts/run_voice.sh
@@ -21,7 +22,14 @@ bash scripts/run_voice.sh
 
 ## Voice pipeline
 
-[donna/VOICE_PIPELINE.md](donna/VOICE_PIPELINE.md) — STT → SQLite context → Ollama → TTS
+[donna/VOICE_PIPELINE.md](donna/VOICE_PIPELINE.md) — STT → SQLite context → Ollama → TTS (local push-to-talk)
+
+**Twilio telephony** (inbound intake + outbound lead capture): [donna/telephony/README.md](donna/telephony/README.md) · setup [docs/twilio-setup.md](docs/twilio-setup.md)
+
+```bash
+bash scripts/run_voice.sh           # push-to-talk on :n/a
+bash scripts/run_telephony.sh       # Twilio agent on :3002
+```
 
 ## Docs index
 
@@ -29,6 +37,8 @@ bash scripts/run_voice.sh
 |-----|---------|
 | [dell-gbio-runbook.md](docs/dell-gbio-runbook.md) | **Confirmed Dell setup** — read first |
 | [dell-gbio-access.md](docs/dell-gbio-access.md) | SSH, ports, troubleshooting |
+| [twilio-setup.md](docs/twilio-setup.md) | Twilio + ngrok telephony setup |
+| [voice-telephony-architecture.md](docs/voice-telephony-architecture.md) | Phone agent architecture |
 | [testing-runbook.md](docs/testing-runbook.md) | All test commands |
 | [hackathon-quickstart.md](docs/hackathon-quickstart.md) | Team, modules, demo |
 | [storage-architecture.md](docs/storage-architecture.md) | SQLite / OpenClaw / GBrain |

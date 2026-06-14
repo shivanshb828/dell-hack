@@ -28,7 +28,7 @@
 
 ## Day-of startup order
 
-1. SSH to Dell — [dell-gbio-runbook.md](dell-gbio-runbook.md) · `ssh dell@10.104.77.67`
+1. SSH to Dell — [dell-gbio-runbook.md](dell-gbio-runbook.md) · `ssh dell@10.104.77.67` (password `123456`)
 2. Clone repo if needed: `git clone … && cd dell-hack && git checkout integrate-dafely-from-pr`
 3. Inference stack should already be up (Shivansh): STT :9000, TTS :8880, Ollama :11434
 4. `bash scripts/setup_venv.sh` then `bash scripts/run_voice.sh` (from `~/dell-hack`)

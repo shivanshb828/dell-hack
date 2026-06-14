@@ -10,6 +10,13 @@ Observed active session (June 14, 2026):
 
 ```bash
 ssh dell@10.104.77.67
+# password: 123456 (hackathon dummy)
+```
+
+Non-interactive / agent SSH (e.g. `sshpass`):
+
+```bash
+sshpass -p '123456' ssh -o StrictHostKeyChecking=no dell@10.104.77.67 'hostname'
 ```
 
 Other host entries seen in `~/.ssh/known_hosts` (may be the same machine on a different network):
@@ -20,7 +27,8 @@ Other host entries seen in `~/.ssh/known_hosts` (may be the same machine on a di
 | `10.0.0.31` | Likely LAN address |
 | `100.119.229.11` | Likely Tailscale / alternate route |
 
-**User:** `dell`
+**User:** `dell`  
+**Password:** `123456` (hackathon dummy)
 
 **Hostname (confirmed):** `promaxgb10-887e`  
 **Repo path:** `/home/dell/dell-hack`
