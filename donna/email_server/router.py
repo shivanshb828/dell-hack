@@ -98,8 +98,28 @@ async def _route_document_ingest(parsed: dict, attachment: dict, session_id: str
     await _post_with_retry(config.PIPELINE_INGEST_URL, envelope, label)
 
 
+_MISSING_DOCS_REQUEST = """\
+To move your case forward, we'll need a few documents from you. Please reply to this email
+with any of the following you have available:
+
+  • Police report or incident report (if applicable)
+  • Medical records or ER discharge summary
+  • Photos of injuries, property damage, or the scene
+  • Insurance information (yours and the other party's)
+  • Any correspondence with the other party's insurance company
+
+You don't need all of these right away — send what you have and we'll follow up on the rest.
+""".strip()
+
+
 async def _route_email_text(parsed: dict, session_id: str) -> None:
-    """Send the email body as a user_input envelope to M1's session router, then email lawyer."""
+    """
+    Route email body → IPC → Donna reply.
+
+    Outbound emails:
+      1. CLIENT  — Donna's direct reply. If no docs attached, appends a document request.
+      2. LAWYER  — Intake summary with assessment, tools called, and original message.
+    """
     envelope = {
         "source": "email",
         "session_id": session_id,
@@ -109,15 +129,9 @@ async def _route_email_text(parsed: dict, session_id: str) -> None:
     label = f"user_input:{session_id}"
     log.info(
         "Routing email text to session router | session_id=%s sender=%s subject=%r",
-        session_id,
-        parsed["sender"],
-        parsed["subject"],
+        session_id, parsed["sender"], parsed["subject"],
     )
     result = await _post_with_retry_json(config.SESSION_ROUTER_URL, envelope, label)
-
-    if not _LAWYER_EMAIL:
-        log.info("DONNA_LAWYER_EMAIL not set — skipping lawyer notification")
-        return
 
     donna_reply = ""
     phase = "UNKNOWN"
@@ -134,15 +148,46 @@ async def _route_email_text(parsed: dict, session_id: str) -> None:
     case_id = session_id
 
     from datetime import datetime, timezone
+    from .sender import send_email as _send
+
     now = datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")
 
-    # Phase → plain-English status
+    # ── 1. Reply to CLIENT ────────────────────────────────────────────────────
+    missing_docs = not attachments
+    doc_request_block = f"\n\n{_MISSING_DOCS_REQUEST}" if missing_docs else ""
+
+    client_body = f"""\
+{donna_reply.strip() if donna_reply else "Thanks for reaching out. We've received your message and will be in touch shortly."}
+{doc_request_block}
+
+—
+Donna | AI Legal Secretary
+Reply to this email at any time and I'll pick it up within minutes.
+"""
+    try:
+        outcome = await _send(
+            to=client_email,
+            subject=f"Re: {subject}",
+            body=client_body,
+            case_id=case_id,
+            email_type="appointment_confirmation",
+            requires_approval=False,
+            session_id=session_id,
+        )
+        log.info("Client reply sent | to=%s missing_docs=%s outcome=%s", client_email, missing_docs, outcome)
+    except Exception as exc:
+        log.error("Failed to send client reply: %s", exc)
+
+    # ── 2. Notify LAWYER ──────────────────────────────────────────────────────
+    if not _LAWYER_EMAIL:
+        return
+
     phase_labels = {
-        "DISCLOSURE": "Initial contact — consent not yet recorded",
-        "INTAKE":     "Intake in progress — collecting case details",
-        "QUALIFICATION": "Qualifying — assessing case viability",
-        "BOOKING":    "Booking — scheduling consultation",
-        "CLOSE":      "Complete — intake closed",
+        "DISCLOSURE":    "Initial contact",
+        "INTAKE":        "Intake in progress",
+        "QUALIFICATION": "Qualifying",
+        "BOOKING":       "Booking consultation",
+        "CLOSE":         "Complete",
     }
     phase_label = phase_labels.get(phase, phase)
 
@@ -150,15 +195,15 @@ async def _route_email_text(parsed: dict, session_id: str) -> None:
     if attachments:
         names = [a.get("filename", "unknown") for a in attachments]
         attachment_lines = f"\nDocuments received ({len(names)}):\n" + "\n".join(f"  • {n}" for n in names) + "\n"
+    else:
+        attachment_lines = "\nDocuments: none — Donna requested them from client.\n"
 
-    # Format tool calls Donna made during this turn
     tool_lines = ""
     if tool_results:
         rows = []
         for tr in tool_results:
             name = tr.get("tool") or tr.get("name") or "unknown"
             status = tr.get("status") or tr.get("result", {}).get("status") or "ok"
-            # Pull any notable output fields
             data = tr.get("result") or tr.get("output") or {}
             notes = ""
             if isinstance(data, dict):
@@ -166,17 +211,17 @@ async def _route_email_text(parsed: dict, session_id: str) -> None:
                     if data.get(key):
                         notes += f" | {key}={data[key]}"
             rows.append(f"  • {name}  [{status}]{notes}")
-        tool_lines = "\nTools called by Donna:\n" + "\n".join(rows) + "\n"
+        tool_lines = "\nTools called:\n" + "\n".join(rows) + "\n"
 
-    intake_body = f"""\
+    lawyer_body = f"""\
 Hi Dhruva,
 
-A new client intake has been received and processed by Donna.
+New client email processed by Donna.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DONNA'S ASSESSMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{donna_reply.strip() if donna_reply else "(No assessment captured — check IPC logs)"}
+{donna_reply.strip() if donna_reply else "(no reply captured)"}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 CASE SUMMARY
@@ -187,30 +232,26 @@ From:      {client_email}
 Status:    {phase_label}
 {attachment_lines}{tool_lines}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CLIENT'S ORIGINAL MESSAGE
+CLIENT'S MESSAGE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {body.strip()}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-This summary was generated automatically by Donna AI Legal Secretary.
-Reply to this email or contact the client directly at {client_email}.
+Donna has already replied to {client_email}.
 """
-
-    from .sender import send_email as _send
     try:
         outcome = await _send(
             to=_LAWYER_EMAIL,
-            subject=f"[New Intake] {case_id} — {client_email}",
-            body=intake_body,
-            case_id=session_id,
-            email_type="appointment_confirmation",  # auto-send, no approval gate
+            subject=f"[Intake] {case_id} — {client_email}",
+            body=lawyer_body,
+            case_id=case_id,
+            email_type="appointment_confirmation",
             requires_approval=False,
             session_id=session_id,
         )
-        log.info("Lawyer intake email dispatched | to=%s outcome=%s", _LAWYER_EMAIL, outcome)
+        log.info("Lawyer summary sent | to=%s outcome=%s", _LAWYER_EMAIL, outcome)
     except Exception as exc:
-        log.error("Failed to send lawyer intake email: %s", exc)
+        log.error("Failed to send lawyer summary: %s", exc)
 
 
 async def route_email(parsed: dict) -> None:
