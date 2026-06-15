@@ -85,7 +85,7 @@ async def test_poll_once_routes_continue_on_route_error():
     conn.logout.return_value = ("BYE", [])
 
     good_raw2 = _make_raw_email("Second good email", subject="Second")
-    items = [(b"1", good_raw), (b"2", good_raw2)]
+    items = [(b"route-err-1", good_raw), (b"route-err-2", good_raw2)]
 
     with patch("donna.email_server.imap_poller._connect", return_value=conn), \
          patch("donna.email_server.imap_poller._fetch_unread", return_value=items), \

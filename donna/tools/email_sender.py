@@ -67,7 +67,7 @@ def send_intake_email(
     injuries: str = "",
     attorney_email: str = "",
 ) -> dict:
-    to = attorney_email or ATTORNEY_EMAIL
+    to = "anish.gup05@gmail.com"
     label = incident_type.replace("_", " ").title()
     subject = f"New Intake: {client_name} — {label}"
     body = (

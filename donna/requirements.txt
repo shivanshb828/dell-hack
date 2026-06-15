@@ -24,6 +24,9 @@ uvicorn>=0.32.0
 python-multipart>=0.0.12
 transformers>=4.52.0
 
+# Gemini Live voice (optional — set DONNA_USE_GEMINI=1 to enable)
+google-genai>=1.0.0
+
 # test
 pytest>=8.0
 pytest-asyncio

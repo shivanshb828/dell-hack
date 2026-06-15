@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "rootDir": ".",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@insforge/sdk": ["./__mocks__/@insforge/sdk.ts"]
+    }
+  },
+  "include": ["src", "tests", "__mocks__"]
+}

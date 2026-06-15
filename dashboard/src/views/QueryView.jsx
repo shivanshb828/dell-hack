@@ -30,6 +30,25 @@ const SUGGESTIONS = [
 
 // ── message rendering ─────────────────────────────────────────────────────────
 
+function SourceBadge({ source }) {
+  if (!source) return null
+  if (source === 'openclaw') {
+    return (
+      <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-semibold tracking-wide px-2 py-0.5 rounded-full"
+        style={{ color: '#166534', backgroundColor: 'rgba(22,101,52,0.10)', border: '1px solid rgba(22,101,52,0.25)' }}>
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+        OpenClaw
+      </span>
+    )
+  }
+  return (
+    <span className="ml-2 text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded"
+      style={{ color: '#B8860B', backgroundColor: 'rgba(184,134,11,0.08)', border: '1px solid rgba(184,134,11,0.2)' }}>
+      Ollama-direct
+    </span>
+  )
+}
+
 function Message({ msg }) {
   const isUser = msg.role === 'user'
 
@@ -70,8 +89,13 @@ function Message({ msg }) {
         style={{ backgroundColor: 'rgba(184,134,11,0.15)', border: '1px solid rgba(184,134,11,0.3)' }}>
         <SparkleIcon />
       </div>
-      <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tl-sm bg-white shadow-sm text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
-        {msg.text}
+      <div className="max-w-[80%]">
+        <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white shadow-sm text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+          {msg.text}
+        </div>
+        <div className="mt-1 flex items-center">
+          <SourceBadge source={msg.source} />
+        </div>
       </div>
     </div>
   )
@@ -109,17 +133,19 @@ export default function QueryView() {
         body: JSON.stringify({ question: q }),
       })
 
-      let answer
+      let answer, source
       if (res.ok) {
         const data = await res.json()
         answer = data.answer
+        source = data.source
       } else {
         answer = `Error ${res.status}: ${await res.text()}`
+        source = null
       }
 
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        { id: `d-${Date.now()}`, role: 'donna', text: answer },
+        { id: `d-${Date.now()}`, role: 'donna', text: answer, source },
       ])
     } catch (err) {
       setMessages((prev) => [
@@ -155,7 +181,7 @@ export default function QueryView() {
             <h1 className="text-base font-semibold text-slate-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
               Ask Donna
             </h1>
-            <p className="text-xs text-slate-500">Query your caseload in plain English — runs locally on this machine</p>
+            <p className="text-xs text-slate-500">Query your caseload — powered by the OpenClaw lawyer agent</p>
           </div>
         </div>
       </div>

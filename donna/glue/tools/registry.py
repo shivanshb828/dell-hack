@@ -9,6 +9,8 @@ from donna.glue.test_data import connect as connect_context, init_context_db
 from donna.glue.tools.calendar import book_calendar
 from donna.telephony import db as telephony_db
 from donna.tools.email_sender import send_intake_email, TOOL_DEFINITIONS as EMAIL_TOOL_DEFINITIONS
+from donna.tools.ocr import ocr_document, TOOL_DEFINITIONS as OCR_TOOL_DEFINITIONS
+from donna.tools.cost_estimator import estimate_case_value, TOOL_DEFINITIONS as COST_TOOL_DEFINITIONS
 
 
 @dataclass(frozen=True)
@@ -208,7 +210,7 @@ TOOL_DEFINITIONS = [
             },
         },
     },
-] + EMAIL_TOOL_DEFINITIONS
+] + EMAIL_TOOL_DEFINITIONS + OCR_TOOL_DEFINITIONS + COST_TOOL_DEFINITIONS
 
 
 class ToolRegistry:
@@ -255,6 +257,8 @@ class ToolRegistry:
             "schedule_followup": self._schedule_followup,
             "notify.dashboard": self._notify_dashboard,
             "send_intake_email": self._send_intake_email,
+            "ocr_document": self._ocr_document,
+            "estimate_case_value": self._estimate_case_value,
         }
         handler = handlers.get(tool_name)
         if not handler:
@@ -513,3 +517,21 @@ class ToolRegistry:
             attorney_email=args.get("attorney_email", ""),
         )
         return ToolResult(ok=True, data=result)
+
+    def _ocr_document(self, call_sid: str, args: dict) -> ToolResult:
+        result = ocr_document(
+            filename=args.get("filename", ""),
+            doc_type=args.get("doc_type", "other"),
+        )
+        return ToolResult(ok=result.get("ok", False), data=result, error=result.get("error"))
+
+    def _estimate_case_value(self, call_sid: str, args: dict) -> ToolResult:
+        result = estimate_case_value(
+            incident_type=args.get("incident_type", "other"),
+            injury_severity=args.get("injury_severity", "minor"),
+            medical_bills_usd=float(args.get("medical_bills_usd", 0)),
+            lost_wages_usd=float(args.get("lost_wages_usd", 0)),
+            liability_clear=bool(args.get("liability_clear", True)),
+            insurance_available=bool(args.get("insurance_available", True)),
+        )
+        return ToolResult(ok=result.get("ok", False), data=result)

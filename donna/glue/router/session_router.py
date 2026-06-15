@@ -68,15 +68,22 @@ class SessionRouter:
         llm: DonnaLLM,
         tools: ToolRegistry,
         firm_name: str = "Donna Legal",
+        qualify_llm: DonnaLLM | None = None,
     ) -> None:
         self.telephony_db_path = telephony_db_path
         self.context_db_path = context_db_path
         self.calendar_db_path = calendar_db_path
         self.llm = llm
+        self.qualify_llm = qualify_llm
         self.tools = tools
         self.firm_name = firm_name
         self._histories: dict[str, list[ChatMessage]] = {}
         self._greeted: set[str] = set()
+
+    def _active_llm(self, phase: str) -> DonnaLLM:
+        if phase == "QUALIFICATION" and self.qualify_llm is not None:
+            return self.qualify_llm
+        return self.llm
 
     def greeting(self, *, call_sid: str, agent_mode: str, caller_name: str | None = None) -> str:
         if agent_mode == "outbound_lead":
@@ -128,14 +135,15 @@ class SessionRouter:
             history.append(ChatMessage(role="assistant", content=fast_reply))
             return RouterResult(reply=fast_reply, phase=phase)
 
+        active_llm = self._active_llm(phase)
         try:
-            result = self.llm.chat(
+            result = active_llm.chat(
                 system_prompt=system_prompt,
                 messages=history,
                 tools=tools_for_turn,
             )
         except Exception:
-            fallback = self.llm.generate_simple(system_prompt=system_prompt, user_text=user_text)
+            fallback = active_llm.generate_simple(system_prompt=system_prompt, user_text=user_text)
             history.append(ChatMessage(role="assistant", content=fallback))
             return RouterResult(reply=fallback, phase=phase)
 
@@ -176,7 +184,7 @@ class SessionRouter:
                     is_returning=is_returning,
                     user_text=user_text,
                 )
-                follow_up = self.llm.chat(
+                follow_up = self._active_llm(updated_phase).chat(
                     system_prompt=follow_up_prompt,
                     messages=history,
                     tools=self._tools_for_turn(agent_mode=agent_mode, phase=updated_phase, user_text=user_text),
@@ -244,8 +252,10 @@ class SessionRouter:
                 first_sentence_seconds=first_sentence_seconds,
             )
 
+        active_llm = self._active_llm(phase)
         try:
             streamed = await self._stream_reply(
+                llm=active_llm,
                 system_prompt=system_prompt,
                 messages=history,
                 tools=tools_for_turn,
@@ -259,7 +269,7 @@ class SessionRouter:
             first_token_seconds = streamed["first_token_seconds"]
             first_sentence_seconds = streamed["first_sentence_seconds"]
         except Exception:
-            fallback = self.llm.generate_simple(system_prompt=system_prompt, user_text=user_text)
+            fallback = active_llm.generate_simple(system_prompt=system_prompt, user_text=user_text)
             first_sentence_seconds = await self._emit_reply_text(
                 fallback,
                 on_sentence=on_sentence,
@@ -314,6 +324,7 @@ class SessionRouter:
                 )
                 try:
                     follow_up = await self._stream_reply(
+                        llm=self._active_llm(updated_phase),
                         system_prompt=follow_up_prompt,
                         messages=history,
                         tools=self._tools_for_turn(agent_mode=agent_mode, phase=updated_phase, user_text=user_text),
@@ -403,6 +414,7 @@ class SessionRouter:
     async def _stream_reply(
         self,
         *,
+        llm: DonnaLLM,
         system_prompt: str,
         messages: list[ChatMessage],
         tools: list[dict],
@@ -416,7 +428,7 @@ class SessionRouter:
         tool_calls: list[dict] = []
         first_token_seconds: float | None = None
         emitted_sentences: list[str] = []
-        async for chunk in self.llm.chat_stream(
+        async for chunk in llm.chat_stream(
             system_prompt=system_prompt,
             messages=messages,
             tools=tools,
@@ -571,7 +583,7 @@ class SessionRouter:
         user_text: str,
         tools_for_turn: list[dict],
     ) -> str | None:
-        if agent_mode != "local_assistant" or phase != "DISCLOSURE" or tools_for_turn:
+        if agent_mode != "local_assistant" or phase != "DISCLOSURE":
             return None
         normalized = re.sub(r"[^a-z0-9\s']", " ", user_text.lower())
         normalized = re.sub(r"\s+", " ", normalized).strip()

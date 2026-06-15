@@ -6,3 +6,8 @@ openclaw/workspace/
 data/donna_telephony.sqlite
 donna/data/donna_telephony.sqlite
 .gstack/
+voice_agent/node_modules/
+voice_agent/.env
+voice_agent/.env.smoke
+voice_agent/dist/
+voice_agent/*.sqlite

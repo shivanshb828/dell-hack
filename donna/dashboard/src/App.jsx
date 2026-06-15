@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-const WS_URL = 'ws://localhost:3001'
+const WS_URL = 'ws://localhost:3001/dashboard'
 
 const STATUS_COLORS = {
   intake: '#3b82f6',
