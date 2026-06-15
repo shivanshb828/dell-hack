@@ -168,59 +168,20 @@ async def _forward_to_vlm(envelope: IPCEnvelope) -> None:
 
 # ── Lawyer query endpoint ─────────────────────────────────────────────────────
 # The dashboard "Ask Donna" panel POSTs here.
-# Primary path: OpenClaw lawyer agent via HTTP gateway.
-# Fallback:     donna.lawyer.agent (Ollama-direct, no OpenClaw needed).
-
-OPENCLAW_URL = os.getenv("OPENCLAW_URL", "http://localhost:18789")
-OPENCLAW_TOKEN = os.getenv("OPENCLAW_GATEWAY_TOKEN", "")
-
+# Runs entirely locally: Ollama → tool layer → PostgreSQL. No external services.
 
 class QueryRequest(BaseModel):
     question: str
-    session_id: str | None = None
-
-
-async def _query_openclaw(question: str) -> str:
-    """Call the OpenClaw lawyer agent via its HTTP gateway."""
-    headers = {"Content-Type": "application/json"}
-    if OPENCLAW_TOKEN:
-        headers["Authorization"] = f"Bearer {OPENCLAW_TOKEN}"
-
-    payload = {
-        "model": "lawyer",
-        "messages": [{"role": "user", "content": question}],
-        "stream": False,
-    }
-    async with httpx.AsyncClient(timeout=90.0) as client:
-        # Try OpenAI-compatible endpoint with agent header
-        resp = await client.post(
-            f"{OPENCLAW_URL}/v1/chat/completions",
-            headers={**headers, "X-OpenClaw-Agent": "lawyer"},
-            json=payload,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return data["choices"][0]["message"]["content"]
 
 
 @app.post("/api/query")
 async def lawyer_query(body: QueryRequest):
-    """Natural-language query against the case database, routed through OpenClaw."""
+    """Natural-language query against the case database via local Ollama."""
     log.info("Query | question=%s", body.question[:120])
-
-    # Primary: OpenClaw gateway
-    try:
-        answer = await _query_openclaw(body.question)
-        log.info("Query answered via OpenClaw")
-        return {"answer": answer, "source": "openclaw"}
-    except Exception as oc_err:
-        log.warning("OpenClaw unavailable (%s) — falling back to Ollama-direct", oc_err)
-
-    # Fallback: Ollama-direct lawyer agent (same tool layer, no OpenClaw dependency)
     try:
         from donna.lawyer.agent import ask as lawyer_ask
         answer = await asyncio.to_thread(lawyer_ask, body.question)
-        return {"answer": answer, "source": "ollama-direct"}
+        return {"answer": answer}
     except Exception as exc:
         log.error("Lawyer query failed: %s", exc)
         raise HTTPException(status_code=500, detail=str(exc))

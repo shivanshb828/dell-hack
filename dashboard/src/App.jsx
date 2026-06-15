@@ -227,7 +227,6 @@ export default function App() {
   const [calendarEvents, setCalendarEvents] = useState(DEMO_EVENTS)
   const [apiEmailDrafts, setApiEmailDrafts] = useState([])
   const [backendConnected, setBackendConnected] = useState(false)
-  const [openclawConnected, setOpenclawConnected] = useState(false)
 
   const refreshBackend = useCallback(async () => {
     try {
@@ -237,11 +236,6 @@ export default function App() {
         return
       }
       setBackendConnected(true)
-
-      // Check OpenClaw gateway liveness (port 18789)
-      fetch('http://localhost:18789/health')
-        .then((r) => setOpenclawConnected(r.ok))
-        .catch(() => setOpenclawConnected(false))
 
       const [leadsRes, casesRes, eventsRes, draftsRes] = await Promise.all([
         fetch(`${API_URL}/api/leads`),
@@ -386,7 +380,6 @@ export default function App() {
         newLeadsCount={leads.filter((l) => l.status === 'new').length}
         pipelineStatus={state.pipelineStatus}
         backendConnected={backendConnected}
-        openclawConnected={openclawConnected}
       />
       <main className="flex-1 overflow-hidden flex flex-col">
         {views[state.activeTab]}

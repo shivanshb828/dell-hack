@@ -30,17 +30,6 @@ const SUGGESTIONS = [
 
 // ── message rendering ─────────────────────────────────────────────────────────
 
-function SourceBadge({ source }) {
-  if (!source) return null
-  const label = source === 'openclaw' ? 'via OpenClaw' : 'via Ollama-direct'
-  return (
-    <span className="ml-2 text-[10px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded"
-      style={{ color: '#B8860B', backgroundColor: 'rgba(184,134,11,0.08)', border: '1px solid rgba(184,134,11,0.2)' }}>
-      {label}
-    </span>
-  )
-}
-
 function Message({ msg }) {
   const isUser = msg.role === 'user'
 
@@ -81,13 +70,8 @@ function Message({ msg }) {
         style={{ backgroundColor: 'rgba(184,134,11,0.15)', border: '1px solid rgba(184,134,11,0.3)' }}>
         <SparkleIcon />
       </div>
-      <div className="max-w-[80%]">
-        <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white shadow-sm text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
-          {msg.text}
-        </div>
-        <div className="mt-1 flex items-center">
-          <SourceBadge source={msg.source} />
-        </div>
+      <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-tl-sm bg-white shadow-sm text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+        {msg.text}
       </div>
     </div>
   )
@@ -125,19 +109,17 @@ export default function QueryView() {
         body: JSON.stringify({ question: q }),
       })
 
-      let answer, source
+      let answer
       if (res.ok) {
         const data = await res.json()
         answer = data.answer
-        source = data.source
       } else {
         answer = `Error ${res.status}: ${await res.text()}`
-        source = null
       }
 
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        { id: `d-${Date.now()}`, role: 'donna', text: answer, source },
+        { id: `d-${Date.now()}`, role: 'donna', text: answer },
       ])
     } catch (err) {
       setMessages((prev) => [
@@ -173,7 +155,7 @@ export default function QueryView() {
             <h1 className="text-base font-semibold text-slate-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
               Ask Donna
             </h1>
-            <p className="text-xs text-slate-500">Query your caseload — powered by the OpenClaw lawyer agent</p>
+            <p className="text-xs text-slate-500">Query your caseload in plain English — runs locally on this machine</p>
           </div>
         </div>
       </div>

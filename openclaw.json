@@ -37,39 +37,6 @@
       memory: { memorySearch: { enabled: true } },
     },
 
-    // ── Lawyer query agent — DB-backed Q&A for the attorney ─────────────────
-    // Invoked by the dashboard "Ask Donna" panel via POST /api/query on the IPC server.
-    // IPC server calls: POST http://localhost:18789/v1/chat/completions
-    //   with header X-OpenClaw-Agent: lawyer
-    // Read-only by default; agent prompt gates writes on explicit attorney instruction.
-    lawyer: {
-      model: "ollama/donna",
-      systemPrompt: { $include: "./agent/lawyer_prompt.md" },
-      thinking: "enabled",
-      memory: { memorySearch: { enabled: true } },
-      tools: {
-        allowed: [
-          "donna_tools::get_dashboard_stats",
-          "donna_tools::get_urgent_deadlines",
-          "donna_tools::get_case_summary",
-          "donna_tools::get_case_file",
-          "donna_tools::list_cases",
-          "donna_tools::search_context",
-          "donna_tools::get_upcoming_events",
-          "donna_tools::get_payment_summary",
-          "donna_tools::search_case_law",
-          "donna_tools::analyze_case_weaknesses",
-          "donna_tools::profile_adverse_adjuster",
-          // Writes — available but agent prompt constrains to explicit attorney instructions
-          "donna_tools::check_calendar_conflicts",
-          "donna_tools::book_calendar",
-          "donna_tools::update_case_file",
-          "donna_tools::log_payment",
-          "donna_tools::log_court_date",
-        ],
-      },
-    },
-
     // ── Voice agent — client-facing intake ──────────────────────────────────
     // Separate agent: different persona, restricted tool set (create_case_file only)
     // M4 feeds Whisper transcripts as text into this agent's session
