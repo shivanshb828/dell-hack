@@ -21,16 +21,6 @@ const RISK_STYLES = {
   green: { badge: 'bg-green-50 text-green-700 border-green-200', bar: 'bg-green-400' },
 }
 
-const DEMO_IDEAS = [
-  { icon: '📞', title: 'Live Inbound Call',       desc: 'Client calls → Donna answers autonomously, collects intake via voice, books consult — zero human touch.' },
-  { icon: '📄', title: 'Document OCR + VLM',      desc: 'Client emails police report → Donna extracts facts, flags SOL date, updates case file instantly.' },
-  { icon: '⚖️', title: 'Real-Time Risk Scoring',  desc: 'As intake flows in, risk score updates live — liability gaps, SOL proximity, prior attorney flags.' },
-  { icon: '📅', title: 'Auto Appointment Booking', desc: 'Donna finds an open slot, books it in the calendar, sends confirmation to client — all in one turn.' },
-  { icon: '📧', title: 'Follow-Up Automation',     desc: 'Donna schedules email check-ins for missing records, sends them automatically at the right time.' },
-  { icon: '🧠', title: 'AI Game Plan Generation',  desc: 'One click → prioritized action plan, settlement range estimate, and SOL countdown per case.' },
-  { icon: '🔒', title: '100% Local / No Cloud',    desc: 'Everything runs on-device. No data leaves the GB10. HIPAA-friendly by default.' },
-  { icon: '🗂️', title: 'Multi-Channel Intake',    desc: 'Voice call, email, or web form — all funnel into the same session-aware Donna pipeline.' },
-]
 
 function StepCard({ step, idx }) {
   return (
@@ -119,9 +109,9 @@ export default function GamePlanView() {
       {/* Header */}
       <div>
         <h2 className="text-base font-semibold text-ink-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-          Case Game Plan
+          Case Strategy
         </h2>
-        <p className="text-[12px] text-ink-400 mt-0.5">AI-generated action plan, risk score, and settlement range for any case</p>
+        <p className="text-[12px] text-ink-400 mt-0.5">Risk assessment, action plan, and settlement range for any active case</p>
       </div>
 
       {/* Input */}
@@ -198,24 +188,6 @@ export default function GamePlanView() {
           </div>
         </div>
       )}
-
-      {/* Demo brainstorm */}
-      <div className="bg-white rounded-lg border border-parchment-200 shadow-card p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-base">💡</span>
-          <p className="text-[13px] font-semibold text-ink-800">High-Impact Demo Moments</p>
-          <span className="text-[10px] text-ink-400 font-mono ml-auto">Donna v1 · GB10 Grace Blackwell</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {DEMO_IDEAS.map((idea, i) => (
-            <div key={i} className="p-3 rounded-lg bg-parchment-50 border border-parchment-100 hover:border-legal-navy/20 hover:shadow-sm transition-all">
-              <div className="text-xl mb-1.5">{idea.icon}</div>
-              <p className="text-[12px] font-semibold text-ink-800 mb-1">{idea.title}</p>
-              <p className="text-[11px] text-ink-500 leading-relaxed">{idea.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
 
     </div>
   )

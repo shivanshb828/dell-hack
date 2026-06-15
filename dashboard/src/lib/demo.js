@@ -16,7 +16,7 @@ export const DEMO_SEQUENCE = [
     delay: 900,
     event: {
       type: 'donna_speech',
-      text: "Thank you for calling Mitchell & Associates. I'm Donna, an AI legal assistant. This call may be recorded for quality assurance. Do I have your consent to record our conversation today?",
+      text: "Mitchell & Associates, this is Donna. Before we start — this call may be recorded for quality purposes. Do I have your consent?",
     },
   },
   { delay: 5500, event: { type: 'pipeline_status', status: 'listening' } },
@@ -51,7 +51,7 @@ export const DEMO_SEQUENCE = [
     delay: 10200,
     event: {
       type: 'donna_speech',
-      text: "I'm so sorry to hear that. I'm going to start your intake now so we can get you the help you need. Can I start with your full name?",
+      text: "Got it. Let's get you started. What's your full name?",
     },
   },
   { delay: 13500, event: { type: 'pipeline_status', status: 'listening' } },
@@ -74,7 +74,7 @@ export const DEMO_SEQUENCE = [
     delay: 17700,
     event: {
       type: 'donna_speech',
-      text: "Thank you, Sarah. Can you tell me where and when the accident happened, and briefly describe the injuries you sustained?",
+      text: "Sarah — where and when did this happen, and what injuries are you dealing with?",
     },
   },
   { delay: 21500, event: { type: 'pipeline_status', status: 'listening' } },
@@ -106,7 +106,7 @@ export const DEMO_SEQUENCE = [
     delay: 26700,
     event: {
       type: 'donna_speech',
-      text: "I've noted all of that. One more question — do you currently have another attorney representing you for this incident?",
+      text: "Noted. Are you currently represented by another attorney on this matter?",
     },
   },
   { delay: 30000, event: { type: 'pipeline_status', status: 'listening' } },
@@ -150,7 +150,7 @@ export const DEMO_SEQUENCE = [
     delay: 35000,
     event: {
       type: 'donna_speech',
-      text: "Great news, Sarah — based on what you've described, this looks like a strong personal injury case for our firm. I'd like to schedule you for a free consultation with one of our attorneys. Are you available this Thursday at 2:00 PM?",
+      text: "Sarah, this looks like a viable case. I want to get you in front of one of our attorneys. Thursday at 2:00 PM — does that work?",
     },
   },
   { delay: 40000, event: { type: 'pipeline_status', status: 'listening' } },
@@ -186,7 +186,7 @@ export const DEMO_SEQUENCE = [
     delay: 44700,
     event: {
       type: 'donna_speech',
-      text: "Perfect! I've booked your initial consultation for Thursday, June 19th at 2:00 PM. You'll receive a confirmation by text. The attorney will review your case details before the meeting. Is there anything else you'd like to add?",
+      text: "Done. Thursday June 19th at 2:00 PM — you'll get a confirmation shortly. Attorney will have your case details ahead of time. Anything else before we wrap up?",
     },
   },
   { delay: 50000, event: { type: 'pipeline_status', status: 'listening' } },
@@ -211,7 +211,7 @@ export const DEMO_SEQUENCE = [
     delay: 54300,
     event: {
       type: 'donna_speech',
-      text: "You're very welcome, Sarah. I've sent a summary to our legal team — they'll be prepared for your Thursday appointment. We look forward to helping you. Take care and feel better soon.",
+      text: "Case summary is with our team. They'll be ready for Thursday. Take care, Sarah.",
     },
   },
   {

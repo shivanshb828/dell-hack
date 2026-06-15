@@ -10,6 +10,7 @@ import EmailsView from './views/EmailsView.jsx'
 import LeadsView from './views/LeadsView.jsx'
 import QueryView from './views/QueryView.jsx'
 import GamePlanView from './views/GamePlanView.jsx'
+import HomeView from './views/HomeView.jsx'
 
 // ── Initial state ─────────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ const initialState = {
   activities: [],
   pipelineStatus: 'idle',
   emailDrafts: [],
-  activeTab: 'live',
+  activeTab: 'home',
   demoRunning: false,
   // session stats (today)
   stats: { callsToday: 0, casesCreated: 0, consultationsBooked: 0 },
@@ -344,6 +345,15 @@ export default function App() {
   }, [refreshBackend])
 
   const views = {
+    home: (
+      <HomeView
+        cases={cases}
+        calendarEvents={calendarEvents}
+        activities={state.activities}
+        stats={state.stats}
+        activeCall={state.activeCall}
+      />
+    ),
     query: <QueryView />,
     gameplan: <GamePlanView />,
     live: (
