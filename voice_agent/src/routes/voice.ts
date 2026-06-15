@@ -80,10 +80,11 @@ voiceRouter.post("/", twilioValidate, async (req: Request, res: Response): Promi
       type: "call_started",
       callSid: CallSid,
       callerPhone,
+      agentMode: mode === "attorney" ? "attorney" : "inbound_intake",
       isReturning,
       priorName,
       timestamp: new Date().toISOString(),
-    });
+    } as Parameters<typeof broadcastEvent>[0]);
 
     const streamToken = issueStreamToken(CallSid, mode, null);
     res.type("text/xml").send(buildStreamTwiml({ callSid: CallSid, streamToken, mode }));

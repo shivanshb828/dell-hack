@@ -35,25 +35,33 @@ export const PHASE_IDS = PHASES.map((p) => p.id)
 
 export const TOOL_TO_PHASE = {
   record_consent: 'DISCLOSURE',
-  'intake.start': 'INTAKE',
-  'intake.update': 'INTAKE',
-  'case.qualify': 'QUALIFICATION',
-  'case.create': 'CLOSE',
-  'case.decline': 'CLOSE',
-  'calendar.create_event': 'BOOKING',
-  schedule_followup: 'BOOKING',
-  'notify.dashboard': 'CLOSE',
+  store_lead_profile: 'INTAKE',
+  calm_response: 'INTAKE',
+  discuss_rates: 'QUALIFICATION',
+  book_appointment: 'BOOKING',
+  send_intake_email: 'CLOSE',
+  transfer_to_human: 'CLOSE',
+  end_call_politely: 'CLOSE',
+  // attorney portal tools
+  list_recent_leads: 'INTAKE',
+  lookup_lead: 'INTAKE',
+  list_upcoming_appointments: 'BOOKING',
+  summarize_call: 'CLOSE',
 }
 
 export const TOOL_LABELS = {
   record_consent: 'Record Consent',
-  'intake.start': 'Start Intake',
-  'intake.update': 'Update Intake',
-  'case.qualify': 'Qualify Case',
-  'case.create': 'Create Case File',
-  'case.decline': 'Decline Case',
-  'calendar.create_event': 'Book Consultation',
-  'notify.dashboard': 'Notify Dashboard',
+  store_lead_profile: 'Store Lead Profile',
+  calm_response: 'Calm Response',
+  discuss_rates: 'Discuss Rates',
+  book_appointment: 'Book Appointment',
+  send_intake_email: 'Send Intake Email',
+  transfer_to_human: 'Transfer to Human',
+  end_call_politely: 'End Call',
+  list_recent_leads: 'List Recent Leads',
+  lookup_lead: 'Lookup Lead',
+  list_upcoming_appointments: 'List Appointments',
+  summarize_call: 'Summarize Call',
 }
 
 export const CASE_STAGE_COLORS = {
@@ -77,6 +85,6 @@ export const EVENT_TYPE_COLORS = {
 export const WS_URL =
   import.meta.env.VITE_WS_URL ??
   (typeof window !== 'undefined'
-    ? `ws://${window.location.hostname}:3001`
-    : 'ws://localhost:3001')
+    ? `ws://${window.location.hostname}:3001/dashboard`
+    : 'ws://localhost:3001/dashboard')
 export const API_URL = import.meta.env.VITE_API_URL ?? ''

@@ -1,7 +1,7 @@
 import { useReducer, useRef, useCallback, useEffect, useState } from 'react'
 import { useDonnaWS } from './hooks/useDonnaWS.js'
 import { PHASE_IDS, TOOL_TO_PHASE, API_URL } from './lib/constants.js'
-import { DEMO_SEQUENCE, DEMO_CASES, DEMO_EVENTS, DEMO_LEADS } from './lib/demo.js'
+// demo data intentionally removed — all data comes from the live backend
 import Sidebar from './components/Sidebar.jsx'
 import LiveCallView from './views/LiveCallView.jsx'
 import CasesView from './views/CasesView.jsx'
@@ -24,8 +24,6 @@ const initialState = {
   pipelineStatus: 'idle',
   emailDrafts: [],
   activeTab: 'home',
-  demoRunning: false,
-  // session stats (today)
   stats: { callsToday: 0, casesCreated: 0, consultationsBooked: 0 },
 }
 
@@ -42,7 +40,8 @@ function reducer(state, action) {
       return { ...state, wsConnected: false }
 
     case 'call_started': {
-      const { callSid, callerPhone, agentMode, isReturning } = action
+      const { callSid, callerPhone, isReturning } = action
+      const agentMode = action.agentMode ?? (action.mode === 'attorney' ? 'attorney' : 'inbound_intake')
       return {
         ...state,
         activeCall: { callSid, callerPhone, agentMode, isReturning, startedAt: ts },
@@ -71,7 +70,6 @@ function reducer(state, action) {
         currentPhase: null,
         completedPhases: [],
         pipelineStatus: 'idle',
-        demoRunning: false,
         activities: [
           ...state.activities,
           {
@@ -119,6 +117,38 @@ function reducer(state, action) {
         transcript: [
           ...state.transcript,
           { id: `d-${ts}-${Math.random()}`, role: 'donna', text: action.text, ts },
+        ],
+      }
+
+    // voice agent sends { type: 'transcript', role: 'agent'|'user', text }
+    case 'transcript':
+      return {
+        ...state,
+        transcript: [
+          ...state.transcript,
+          {
+            id: `t-${ts}-${Math.random()}`,
+            role: action.role === 'agent' ? 'donna' : 'user',
+            text: action.text,
+            ts,
+          },
+        ],
+      }
+
+    // voice agent sends action_done instead of tool_call
+    case 'action_done':
+      return {
+        ...state,
+        activities: [
+          ...state.activities,
+          {
+            id: `act-${ts}-${Math.random()}`,
+            type: 'tool_call',
+            tool: action.action,
+            args: {},
+            result: { ok: action.success, data: action.result },
+            ts,
+          },
         ],
       }
 
@@ -183,9 +213,6 @@ function reducer(state, action) {
     case 'set_tab':
       return { ...state, activeTab: action.tab }
 
-    case 'set_demo_running':
-      return { ...state, demoRunning: action.value }
-
     default:
       return state
   }
@@ -205,28 +232,10 @@ export default function App() {
 
   useDonnaWS(handleEvent)
 
-  // Demo simulation timers
-  const demoTimers = useRef([])
-
-  const runDemo = useCallback(() => {
-    if (state.demoRunning) return
-    dispatch({ type: 'set_demo_running', value: true })
-
-    demoTimers.current.forEach(clearTimeout)
-    demoTimers.current = []
-
-    DEMO_SEQUENCE.forEach(({ delay, event }) => {
-      const t = setTimeout(() => {
-        dispatchRef.current({ ...event, ts: Date.now() })
-      }, delay)
-      demoTimers.current.push(t)
-    })
-  }, [state.demoRunning])
-
   // Leads / cases / calendar / email drafts from backend API
   const [leads, setLeads] = useState([])
-  const [cases, setCases] = useState(DEMO_CASES)
-  const [calendarEvents, setCalendarEvents] = useState(DEMO_EVENTS)
+  const [cases, setCases] = useState([])
+  const [calendarEvents, setCalendarEvents] = useState([])
   const [apiEmailDrafts, setApiEmailDrafts] = useState([])
   const [backendConnected, setBackendConnected] = useState(false)
 
@@ -359,8 +368,6 @@ export default function App() {
         activities={state.activities}
         pipelineStatus={state.pipelineStatus}
         stats={state.stats}
-        demoRunning={state.demoRunning}
-        onRunDemo={runDemo}
         wsConnected={state.wsConnected}
       />
     ),
