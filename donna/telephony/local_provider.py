@@ -51,6 +51,12 @@ class LocalVoiceSession:
         self.pcm_buffer = b""
         responses = self._drain_outbound_frames()
 
+        # Suppress VAD while Donna is playing audio — avoids echo triggering new turns
+        if time.time() < self.speaking_until:
+            self.vad.reset()
+            responses.extend(self._drain_outbound_frames())
+            return responses
+
         offset = 0
         while offset + CHUNK_BYTES_16K <= len(combined):
             chunk = combined[offset : offset + CHUNK_BYTES_16K]

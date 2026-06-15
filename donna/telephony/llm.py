@@ -55,8 +55,8 @@ class DonnaLLM:
     @staticmethod
     def _default_options() -> dict:
         options: dict[str, int | float] = {
-            "num_predict": 16,
             "temperature": 0.2,
+            "repeat_penalty": 1.3,
         }
         num_predict = os.getenv("DONNA_OLLAMA_NUM_PREDICT", "").strip()
         if num_predict:
@@ -81,6 +81,16 @@ class DonnaLLM:
         tools: list[dict] | None = None,
     ) -> dict:
         num_ctx = int(os.getenv("DONNA_NUM_CTX", "4096"))
+        # Base options: context window + sane predict cap + anti-repetition
+        options: dict = {
+            "num_ctx": num_ctx,
+            "num_predict": 128,
+            "repeat_penalty": 1.3,
+        }
+        # Merge user/env overrides without clobbering num_ctx or repeat_penalty
+        for k, v in self.options.items():
+            if k != "num_ctx":
+                options[k] = v
         payload: dict = {
             "model": self.model,
             "messages": [{"role": "system", "content": system_prompt}, *[
@@ -88,12 +98,10 @@ class DonnaLLM:
             ]],
             "stream": stream,
             "keep_alive": self.keep_alive,
-            "options": {"num_ctx": num_ctx, "num_predict": 256},
+            "options": options,
         }
         if tools:
             payload["tools"] = tools
-        if self.options:
-            payload["options"] = self.options
         return payload
 
     @staticmethod
