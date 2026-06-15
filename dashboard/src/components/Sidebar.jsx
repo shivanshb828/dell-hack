@@ -120,7 +120,6 @@ export default function Sidebar({
   newLeadsCount,
   pipelineStatus,
   backendConnected = false,
-  openclawConnected = false,
 }) {
   return (
     <aside className="w-56 flex-shrink-0 flex flex-col h-full border-r border-white/5" style={{ backgroundColor: '#181C26' }}>
@@ -200,7 +199,6 @@ export default function Sidebar({
         <ServiceDot connected={wsConnected} label="Dashboard WS" />
         <ServiceDot connected={backendConnected} label="Telephony API" />
         <ServiceDot connected={backendConnected} label="IPC / Email" />
-        <ServiceDot connected={openclawConnected} label="OpenClaw" />
       </div>
 
       {/* Footer */}
